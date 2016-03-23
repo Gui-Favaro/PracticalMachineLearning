@@ -1,0 +1,29 @@
+---
+title: "Practical Machine Learning Assignment"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The data consists of a set of readings from sensors attached to subjects performing a variety of exercises. The task is to build a model which will correctly classify activities, given unlabelled sets of readings.
+
+Load the Caret library and set the random number generator's seed, to ensure reproducibility:
+
+```{r}
+library(caret)
+set.seed(1234)
+```
+
+
+#Part I: Reading and Cleaning the dataset
+
+First let us read the dataset. We will insert NAs from the string "NA" and empty fields. We will
+also trim whitespaces in other fields so that R can treat them correctly as numeric.
+
+```{r}
+rawData <- read.csv("pml-training.csv", na.strings=c("NA",""), strip.white=T)
+dim(rawData)
+```
+
