@@ -118,6 +118,87 @@ $(document).ready(function () {
 <pre><code>## Loading required package: lattice
 ## Loading required package: ggplot2</code></pre>
 <pre class="r"><code>set.seed(1234)</code></pre>
+<div id="part-i-reading-and-cleaning-the-dataset" class="section level1">
+<h1>Part I: Reading and Cleaning the dataset</h1>
+<p>First let us read the dataset. We will insert NAs from the string “NA” and empty fields. We will also trim whitespaces in other fields so that R can treat them correctly as numeric.</p>
+<pre class="r"><code>rawData &lt;- read.csv(&quot;pml-training.csv&quot;, na.strings=c(&quot;NA&quot;,&quot;&quot;), strip.white=T)
+dim(rawData)</code></pre>
+<pre><code>## [1] 19622   160</code></pre>
+<p>The dataset has 19.622 observations and 160 columns. We will discard the columns with an NA and also the columns related to time and/or metadata.</p>
+<pre class="r"><code>isNA &lt;- apply(rawData, 2, function(x) { sum(is.na(x)) })
+validData &lt;- subset(rawData[, which(isNA == 0)], 
+                    select=-c(X, user_name, new_window, num_window, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp))
+dim(validData)</code></pre>
+<pre><code>## [1] 19622    53</code></pre>
+<p>We are left with 53 columns and the same numbers of observations, as expected.</p>
+<p>After that, we will partition the data into training (70%) and test sets (30%).</p>
+<pre class="r"><code>inTrain &lt;- createDataPartition(validData$classe, p=0.7, list=F)
+training &lt;- validData[inTrain,]
+testing &lt;- validData[-inTrain,]</code></pre>
+</div>
+<div id="partii---how-to-train-your-random-forest-model" class="section level1">
+<h1>PartII - How to train your Random Forest Model</h1>
+<p>We will train a Random Forest in our data.</p>
+<pre class="r"><code>ctrl &lt;- trainControl(allowParallel=T, method=&quot;cv&quot;, number=4)
+model &lt;- train(classe ~ ., data=training, model=&quot;rf&quot;, trControl=ctrl)</code></pre>
+<pre><code>## Loading required package: randomForest
+## randomForest 4.6-12
+## Type rfNews() to see new features/changes/bug fixes.
+## 
+## Attaching package: 'randomForest'
+## 
+## The following object is masked from 'package:ggplot2':
+## 
+##     margin</code></pre>
+<pre class="r"><code>pred &lt;- predict(model, newdata=testing)</code></pre>
+<p>Checking the predictions in the test dataset.</p>
+<pre class="r"><code>sum(pred == testing$classe) / length(pred)</code></pre>
+<pre><code>## [1] 0.9942226</code></pre>
+<p>Let us also check the confusion matrix:</p>
+<pre class="r"><code>confusionMatrix(testing$classe, pred)$table</code></pre>
+<pre><code>##           Reference
+## Prediction    A    B    C    D    E
+##          A 1674    0    0    0    0
+##          B    9 1129    1    0    0
+##          C    0    5 1017    4    0
+##          D    0    1    6  955    2
+##          E    0    1    2    3 1076</code></pre>
+<p>Analysing the confusion matrix, we can see that our model is 99.4% accurate. This is a very high accuracy!</p>
+<p>Checking the solutions we need.</p>
+<pre class="r"><code>rawTestData &lt;- read.csv(&quot;pml-testing.csv&quot;, na.strings=c(&quot;NA&quot;,&quot;&quot;), strip.white=T)
+validTestData &lt;- subset(rawTestData[, which(isNA == 0)], 
+                        select=-c(X, user_name, new_window, num_window, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp))
+predict(model, newdata=validTestData)</code></pre>
+<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
+## Levels: A B C D E</code></pre>
+<p>To sum it up, let us see the importance of the variables to the model.</p>
+<pre class="r"><code>varImp(model)</code></pre>
+<pre><code>## rf variable importance
+## 
+##   only 20 most important variables shown (out of 52)
+## 
+##                      Overall
+## roll_belt             100.00
+## pitch_forearm          59.13
+## yaw_belt               56.40
+## magnet_dumbbell_y      44.45
+## pitch_belt             43.52
+## magnet_dumbbell_z      41.89
+## roll_forearm           39.48
+## accel_dumbbell_y       20.55
+## roll_dumbbell          17.21
+## magnet_dumbbell_x      16.38
+## accel_forearm_x        15.71
+## magnet_belt_z          15.55
+## total_accel_dumbbell   14.32
+## accel_dumbbell_z       12.93
+## magnet_belt_y          12.92
+## magnet_forearm_z       12.78
+## accel_belt_z           11.94
+## yaw_arm                11.60
+## gyros_belt_z           10.76
+## magnet_belt_x          10.11</code></pre>
+</div>
 
 
 

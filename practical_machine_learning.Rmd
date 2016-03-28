@@ -27,3 +27,66 @@ rawData <- read.csv("pml-training.csv", na.strings=c("NA",""), strip.white=T)
 dim(rawData)
 ```
 
+The dataset has 19.622 observations and 160 columns. We will discard the columns with an NA and 
+also the columns related to time and/or metadata.
+
+```{r}
+isNA <- apply(rawData, 2, function(x) { sum(is.na(x)) })
+validData <- subset(rawData[, which(isNA == 0)], 
+                    select=-c(X, user_name, new_window, num_window, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp))
+dim(validData)
+```
+
+We are left with 53 columns and the same numbers of observations, as expected.
+
+After that, we will partition the data into training (70%) and test sets (30%).
+
+```{r}
+inTrain <- createDataPartition(validData$classe, p=0.7, list=F)
+training <- validData[inTrain,]
+testing <- validData[-inTrain,]
+```
+
+#PartII - How to train your Random Forest Model
+
+We will train a Random Forest in our data.
+
+```{r}
+ctrl <- trainControl(allowParallel=T, method="cv", number=4)
+model <- train(classe ~ ., data=training, model="rf", trControl=ctrl)
+pred <- predict(model, newdata=testing)
+```
+
+Checking the predictions in the test dataset.
+
+```{r}
+sum(pred == testing$classe) / length(pred)
+```
+
+Let us also check the confusion matrix:
+
+```{r}
+confusionMatrix(testing$classe, pred)$table
+```
+
+Analysing the confusion matrix, we can see that our model is 99.4% accurate. This is a very high accuracy!
+
+Checking the solutions we need.
+
+```{r}
+rawTestData <- read.csv("pml-testing.csv", na.strings=c("NA",""), strip.white=T)
+validTestData <- subset(rawTestData[, which(isNA == 0)], 
+                        select=-c(X, user_name, new_window, num_window, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp))
+predict(model, newdata=validTestData)
+```
+
+To sum it up, let us see the importance of the variables to the model.
+
+```{r}
+varImp(model)
+```
+
+
+
+
+
